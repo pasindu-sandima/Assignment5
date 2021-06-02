@@ -14,11 +14,35 @@
 using std::pair; using std::vector; using std::uint32_t;
 using std::map; using std::string; using std::cout; using std::endl;
 using std::sort; using std::ifstream; using std::bitset;
-using std::stringstream;
+using std::stringstream;using std::ofstream;
 
 stringstream ss;
 
-bool compSetNum(pair<uint32_t, pair<int,int>>& a, pair<uint32_t, pair<int, int>>& b)
+stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect);
+void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstream& ss);
+vector<uint32_t> generateDict(vector<uint32_t>& binaryVect);
+vector<uint32_t> ReadFile(string fileName);
+void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss);
+uint32_t BinStringtoInt(string& s);
+
+
+int main() {
+
+	vector<uint32_t> binaryVect = ReadFile("original.txt");
+
+	vector<uint32_t> dictVect = generateDict(binaryVect);
+
+	stringstream ss = compress(binaryVect,dictVect);
+
+	WriteCompressedFile(dictVect,ss);
+
+
+	return 0;
+}
+
+
+
+bool compSetNum(pair<uint32_t, pair<int, int>>& a, pair<uint32_t, pair<int, int>>& b)
 {
 	return a.second.first < b.second.first;
 }
@@ -59,16 +83,34 @@ vector<uint32_t> ReadFile(string fileName) {
 
 }
 
+void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
+	unsigned padsize = ss.str().length();
+	padsize = padsize % 32;
+
+	ofstream WriteFileStream("compressed.txt");
+
+	for (unsigned int i = 0; i < ss.str().length(); i++) {
+		WriteFileStream << ss.str()[i];
+		if (i % 32 == 31) WriteFileStream << endl;
+	}
+
+	WriteFileStream << string(32 - padsize, '0') << endl;
+
+	WriteFileStream << "xxxx" << endl;
+	for (auto& i : dictVect) {
+		WriteFileStream << bitset<32>(i) << endl;
+	}
+}
 vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	vector<uint32_t> dictVect;
 
-	map<uint32_t, pair<int,int>> count;
+	map<uint32_t, pair<int, int>> count;
 
 	int setCounter = 0;
 	for (uint32_t i : binaryVect) {
 		if (count[i].second++ == 0) {
 			count[i].first = setCounter++;
-		}	
+		}
 	}
 
 
@@ -80,7 +122,7 @@ vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	/*for (auto m : count) {
 		cout << m.first << " :" << m.second.second << " " << m.second.first << endl << endl;
 	}*/
-	
+
 	sort(sortVect.begin(), sortVect.end(), compSetNum);
 	sort(sortVect.begin(), sortVect.end(), compVal);
 
@@ -95,9 +137,9 @@ vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	return dictVect;
 }
 
-void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
+void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstream& ss) {
 	unsigned int lowMis = 32;
-	
+
 	const uint32_t k = 1 << 31U;
 	vector<pair<uint32_t, vector<unsigned int>>> mismatches;  // dictionary item, vector<mismatch index> 
 
@@ -111,9 +153,9 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 				misPos.push_back(j);
 			}
 			if (numMis > 4) break;
-		} 
+		}
 		if (numMis < lowMis) lowMis = numMis;
-		
+
 		if (numMis < 5) {
 			mismatches.push_back(make_pair(i, misPos));
 		}
@@ -145,17 +187,17 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 							costss.str(string());
 							costss << bitset<3>(4) << bitset<5>(i.second[0]) << bitset<4>(i.first);
 						}
-						
+
 					}
 					else if ((i.second[1] - i.second[0]) < 4) {
 						if (cost >= 5 && i.first < costIndex) {
 							cost = 5;
 							costIndex = i.first;
-							unsigned bitmask = (1 << (3 - (i.second[1]-i.second[0]))) | (1 << 3);
+							unsigned bitmask = (1 << (3 - (i.second[1] - i.second[0]))) | (1 << 3);
 							//compress for 4 bit bitmask with 2 bit mismatches
 							costss.str(string());
 							costss << bitset<3>(2) << bitset<5>(i.second[0]) << bitset<4>(bitmask) << bitset<4>(i.first);
-							
+
 						}
 					}
 					else {
@@ -182,7 +224,7 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 				}
 				else {
 					if ((i.second[3] - i.second[0]) == 3) {
-						if (cost >= 4  && i.first < costIndex) {
+						if (cost >= 4 && i.first < costIndex) {
 							cost = 4;
 							costIndex = i.first;
 							//compress for 4 bit consecutive
@@ -204,13 +246,14 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 
 }
 
-void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
+stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 
 	unsigned int RLEcount = 0;
 	unsigned int vectSize = binaryVect.size();
 	uint32_t curBinary;
+	stringstream ss;
 
-	for (unsigned i= 0; i < vectSize ; i++) {
+	for (unsigned i = 0; i < vectSize; i++) {
 		curBinary = binaryVect[i];
 		if (RLEcount == 0) {
 			// TODO ----- implement compression except RLE
@@ -224,12 +267,12 @@ void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 			else
 			{
 				//Find number of mismatches with dict entries
-				findNumMismatch(curBinary, dictVect);
+				findNumMismatch(curBinary, dictVect,ss);
 
 			}
 
 		}
-		if ((i+1) < vectSize && curBinary == binaryVect[i + 1]) {
+		if ((i + 1) < vectSize && curBinary == binaryVect[i + 1]) {
 			if (RLEcount == 8) {
 				//Implement RLC encoding
 				ss << bitset<3>(1) << bitset<3>(7);
@@ -241,44 +284,14 @@ void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 				RLEcount++;
 			}
 		}
-		else if(RLEcount != 0)
-		{	
+		else if (RLEcount != 0)
+		{
 			// Implement RLE encoding for RLEcount
-			ss << bitset<3>(1) << bitset<3>(RLEcount-1);
+			ss << bitset<3>(1) << bitset<3>(RLEcount - 1);
 			RLEcount = 0;
 
 		}
 	}
+	return ss;
 }
 
-
-
-int main() {
-
-	vector<uint32_t> binaryVect = ReadFile("original.txt");
-
-	vector<uint32_t> dictVect = generateDict(binaryVect);
-
-	compress(binaryVect,dictVect);
-
-	unsigned padsize = ss.str().length();
-	padsize = padsize % 32; 
-
-	for (unsigned int i = 0; i < ss.str().length(); i++) {
-		cout << ss.str()[i];
-		if (i % 32 == 31) cout << endl;
-	}
-
-	cout << string(32 - padsize, '0') << endl;
-	
-
-
-
-	cout << "xxxx" << endl;
-	for (auto& i : dictVect) {
-		cout << bitset<32>(i) << endl;
-	}
-	cout << endl;
-
-	return 0;
-}
