@@ -16,6 +16,8 @@ using std::map; using std::string; using std::cout; using std::endl;
 using std::sort; using std::ifstream; using std::bitset;
 using std::stringstream;
 
+stringstream ss;
+
 bool compSetNum(pair<uint32_t, pair<int,int>>& a, pair<uint32_t, pair<int, int>>& b)
 {
 	return a.second.first < b.second.first;
@@ -119,7 +121,7 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 		if (numMis == 1) break;
 	}
 	if (lowMis > 4) {
-		cout << bitset<3>(0) << bitset<32>(curBinary) << endl;
+		ss << bitset<3>(0) << bitset<32>(curBinary);
 	}
 	else {
 		unsigned cost = 10;
@@ -196,7 +198,7 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 				costss << bitset<3>(0) << bitset<32>(curBinary);
 			}
 		}
-		cout << costss.str() << endl;
+		ss << costss.str();
 
 	}
 
@@ -217,7 +219,7 @@ void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 			if (findIt != dictVect.end()) {
 				//cout << "Direct Mapping at index " << findIt - dictVect.begin() << endl;
 				// Compress for direct mapping
-				cout << bitset<3>(7) << bitset<4>(findIt - dictVect.begin()) << endl;
+				ss << bitset<3>(7) << bitset<4>(findIt - dictVect.begin());
 			}
 			else
 			{
@@ -230,7 +232,7 @@ void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 		if ((i+1) < vectSize && curBinary == binaryVect[i + 1]) {
 			if (RLEcount == 8) {
 				//Implement RLC encoding
-				cout << bitset<3>(1) << bitset<3>(7) << endl;
+				ss << bitset<3>(1) << bitset<3>(7);
 				RLEcount = 0;
 
 			}
@@ -242,14 +244,14 @@ void compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 		else if(RLEcount != 0)
 		{	
 			// Implement RLE encoding for RLEcount
-			cout << bitset<3>(1) << bitset<3>(RLEcount-1) << endl;
+			ss << bitset<3>(1) << bitset<3>(RLEcount-1);
 			RLEcount = 0;
 
 		}
 	}
 }
 
-stringstream ss;
+
 
 int main() {
 
@@ -259,11 +261,15 @@ int main() {
 
 	compress(binaryVect,dictVect);
 
-	
+	unsigned padsize = ss.str().length();
+	padsize = padsize % 32; 
 
-	/*for (unsigned int i = 0; i < ss.str().length(); i++) {
-		cout << ss.str()[i] << endl;
-	}*/
+	for (unsigned int i = 0; i < ss.str().length(); i++) {
+		cout << ss.str()[i];
+		if (i % 32 == 31) cout << endl;
+	}
+
+	cout << string(32 - padsize, '0') << endl;
 	
 
 
@@ -272,5 +278,7 @@ int main() {
 	for (auto& i : dictVect) {
 		cout << bitset<32>(i) << endl;
 	}
+	cout << endl;
+
 	return 0;
 }
