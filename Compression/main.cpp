@@ -124,6 +124,7 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 	else {
 		unsigned cost = 10;
 		stringstream costss;
+		unsigned costIndex = 15;
 		sort(mismatches.begin(), mismatches.end(), cmpMismatch);
 
 		if (lowMis == 1) {
@@ -135,15 +136,19 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 			for (auto& i : mismatches) {
 				if (i.second.size() == 2) {
 					if ((i.second[1] - i.second[0]) == 1) {
-						cost = 2;
-						//compress for 2 bit consecutive
-						costss.str(string());
-						costss << bitset<3>(4) << bitset<5>(i.second[0]) << bitset<4>(i.first);
-						break;
+						if (i.first < costIndex) {
+							cost = 2;
+							costIndex = i.first;
+							//compress for 2 bit consecutive
+							costss.str(string());
+							costss << bitset<3>(4) << bitset<5>(i.second[0]) << bitset<4>(i.first);
+						}
+						
 					}
 					else if ((i.second[1] - i.second[0]) < 4) {
-						if (cost > 5) {
+						if (cost >= 5 && i.first < costIndex) {
 							cost = 5;
+							costIndex = i.first;
 							unsigned bitmask = (1 << (3 - (i.second[1]-i.second[0]))) | (1 << 3);
 							//compress for 4 bit bitmask with 2 bit mismatches
 							costss.str(string());
@@ -152,8 +157,9 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 						}
 					}
 					else {
-						if (cost > 6) {
+						if (cost >= 6 && i.first < costIndex) {
 							cost = 6;
+							costIndex = i.first;
 							//compress for 2 bit anywhere
 							costss.str(string());
 							costss << bitset<3>(6) << bitset<5>(i.second[0]) << bitset<5>(i.second[1]) << bitset<4>(i.first);
@@ -162,9 +168,10 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 				}
 				else if (i.second.size() == 3) {
 					if ((i.second[2] - i.second[0]) < 4) {
-						if (cost > 5) {
+						if (cost >= 5 && i.first < costIndex) {
 							unsigned bitmask = (1 << (3 - (i.second[1] - i.second[0]))) | (1 << (3 - (i.second[2] - i.second[0]))) | (1 << 3);
 							cost = 5;
+							costIndex = i.first;
 							//compress for 4 bit bitmask with 3 bit mismatches
 							costss.str(string());
 							costss << bitset<3>(2) << bitset<5>(i.second[0]) << bitset<4>(bitmask) << bitset<4>(i.first);
@@ -173,8 +180,9 @@ void findNumMismatch(uint32_t curBinary, vector<uint32_t>& dictVect ) {
 				}
 				else {
 					if ((i.second[3] - i.second[0]) == 3) {
-						if (cost > 4) {
+						if (cost >= 4  && i.first < costIndex) {
 							cost = 4;
+							costIndex = i.first;
 							//compress for 4 bit consecutive
 							costss.str(string());
 							costss << bitset<3>(5) << bitset<5>(i.second[0]) << bitset<4>(i.first);
