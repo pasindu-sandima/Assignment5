@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 		stringstream ss = compress(binaryVect, dictVect);
 		WriteCompressedFile(dictVect, ss);
 	}
-	if (problem == 2) {
+	else if (problem == 2) {
 		stringstream readSS;
 		vector<uint32_t> dictVect = ReadCompressedFile("compressed.txt", readSS);
 		ofstream writeSS("original.txt");
@@ -93,7 +93,6 @@ vector<uint32_t> ReadOriginalFile(string fileName) {
 
 	while (getline(ReadFStream, tempS)) {
 		tempInt = BinStringtoInt(tempS);
-		cout << tempS;
 		binaryVect.push_back(tempInt);
 	}
 	return binaryVect;
