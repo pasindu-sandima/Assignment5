@@ -14,29 +14,45 @@
 using std::pair; using std::vector; using std::uint32_t;
 using std::map; using std::string; using std::cout; using std::endl;
 using std::sort; using std::ifstream; using std::bitset;
-using std::stringstream;using std::ofstream;
+using std::stringstream; using std::ofstream; using std::cin;
 
-stringstream ss;
 
 stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect);
 void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstream& ss);
 vector<uint32_t> generateDict(vector<uint32_t>& binaryVect);
-vector<uint32_t> ReadFile(string fileName);
+vector<uint32_t> ReadOriginalFile(string fileName);
 void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss);
 uint32_t BinStringtoInt(string& s);
+vector<uint32_t> ReadCompressedFile(string fileName, stringstream& ss);
+void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeSS);
 
 
-int main() {
+int main(int argc, char *argv[]) {
 
-	vector<uint32_t> binaryVect = ReadFile("original.txt");
+	if (argc != 2) {
+		cout << "Invalid Number of Arguments" << endl;
+		return 0;
+	}
 
-	vector<uint32_t> dictVect = generateDict(binaryVect);
+	
 
-	stringstream ss = compress(binaryVect,dictVect);
+	unsigned problem = atoi(argv[1]);
 
-	WriteCompressedFile(dictVect,ss);
-
-
+	if (problem == 1) {
+		vector<uint32_t> binaryVect = ReadOriginalFile("original.txt");
+		vector<uint32_t> dictVect = generateDict(binaryVect);
+		stringstream ss = compress(binaryVect, dictVect);
+		WriteCompressedFile(dictVect, ss);
+	}
+	if (problem == 2) {
+		stringstream readSS;
+		vector<uint32_t> dictVect = ReadCompressedFile("compressed.txt", readSS);
+		ofstream writeSS("original.txt");
+		decompress(dictVect, readSS,writeSS);
+	}
+	else {
+		cout << "Invalid Argument" << endl;
+	}
 	return 0;
 }
 
@@ -65,18 +81,19 @@ uint32_t BinStringtoInt(string& s) {
 	return val;
 }
 
-vector<uint32_t> ReadFile(string fileName) {
-	ifstream MyReadFile(fileName);
+vector<uint32_t> ReadOriginalFile(string fileName) {
+	ifstream ReadFStream(fileName);
 	string tempS;
 	uint32_t tempInt;
 	vector<uint32_t> binaryVect;
 
-	if (MyReadFile.fail()) {
+	if (ReadFStream.fail()) {
 		cout << "Failed to open the file" << endl;
 	}
 
-	while (getline(MyReadFile, tempS)) {
+	while (getline(ReadFStream, tempS)) {
 		tempInt = BinStringtoInt(tempS);
+		cout << tempS;
 		binaryVect.push_back(tempInt);
 	}
 	return binaryVect;
@@ -101,6 +118,7 @@ void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 		WriteFileStream << bitset<32>(i) << endl;
 	}
 }
+
 vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	vector<uint32_t> dictVect;
 
@@ -295,3 +313,109 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 	return ss;
 }
 
+vector<uint32_t> ReadCompressedFile(string fileName, stringstream& ss) {
+	ifstream ReadFStream(fileName);
+	string tempS;
+	unsigned tempInt;
+	vector<uint32_t> dictVect;
+
+	if (ReadFStream.fail()) {
+		cout << "Failed to open the file" << endl;
+	}
+
+	while (getline(ReadFStream, tempS)) {
+		if (tempS == "xxxx") break;
+		ss << tempS;
+	}
+	
+	while (getline(ReadFStream, tempS)) {
+		tempInt = BinStringtoInt(tempS);
+		dictVect.push_back(tempInt);
+	}
+	return dictVect;
+
+}
+
+
+void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeSS) {
+
+	bitset<3> prefixB;
+	bitset<32> binaryB;
+	bitset<5> locationB,locationB2;
+	bitset<4> bitmaskB;
+	bitset<4> dictInB;
+	bitset<3> RLEB;
+
+	unsigned sslen = readSS.str().length();
+	unsigned curlen = 0;
+
+	while (curlen + 3 < sslen) {
+		readSS >> prefixB;
+		curlen += 3;
+
+		switch (prefixB.to_ulong())
+		{
+		case 0:
+			if (curlen + 32 > sslen) break;
+			curlen += 32;
+			readSS >> binaryB;
+			writeSS << binaryB << endl;
+			continue;
+		case 1:
+			if (curlen + 3 > sslen) break;
+			curlen += 3;
+			readSS >> RLEB;
+			for (unsigned i = 0; i <= RLEB.to_ulong(); i++) {
+				writeSS << binaryB << endl;
+			}
+			continue;
+		case 2:
+			if (curlen + 13 > sslen) break;
+			curlen += 13;
+			readSS >> locationB >> bitmaskB >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (bitmaskB.to_ulong() << (28U - locationB.to_ulong())));
+			writeSS << binaryB << endl;
+			continue;
+		case 3:
+			if (curlen + 9 > sslen) break;
+			curlen += 9;
+			readSS >> locationB  >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (1U << (31U - locationB.to_ulong())));
+			writeSS << binaryB << endl;
+			continue;
+		case 4:
+			if (curlen + 9 > sslen) break;
+			curlen += 9;
+			readSS >> locationB >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (3U << (30U - locationB.to_ulong())));
+			writeSS << binaryB << endl;
+			continue;
+		case 5:
+			if (curlen + 9 > sslen) break;
+			curlen += 9;
+			readSS >> locationB >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (15U << (28U - locationB.to_ulong())));
+			writeSS << binaryB << endl;
+			continue;
+		case 6:
+			if (curlen + 14 > sslen) break;
+			curlen += 14;
+			readSS >> locationB >> locationB2 >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (  (1U << (31U - locationB.to_ulong())) | (1U << (31U - locationB2.to_ulong())))   );
+			writeSS << binaryB << endl;
+			continue;
+		case 7:
+			if (curlen + 4 > sslen) break;
+			curlen += 4;
+			readSS >> dictInB;
+			binaryB = bitset<32>(dictVect[dictInB.to_ulong()]);
+			writeSS << binaryB << endl;
+			continue;
+
+		default:
+			break;
+		}
+		break;
+
+	}
+}
