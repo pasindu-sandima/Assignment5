@@ -29,14 +29,15 @@ void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeS
 
 int main(int argc, char *argv[]) {
 
-	if (argc != 2) {
+	/*if (argc != 2) {
 		cout << "Invalid Number of Arguments" << endl;
 		return 0;
-	}
+	}*/
 
 	
 
-	unsigned problem = atoi(argv[1]);
+	//unsigned problem = atoi(argv[1]);
+	unsigned problem = 1;
 
 	if (problem == 1) {
 		vector<uint32_t> binaryVect = ReadOriginalFile("original.txt");
