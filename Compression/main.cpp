@@ -7,22 +7,24 @@
 #include <bitset>
 #include <sstream>
 
-//using namespace std;
 using std::pair; using std::vector; using std::uint32_t;
 using std::map; using std::string; using std::cout; using std::endl;
 using std::sort; using std::stable_sort; using std::ifstream; using std::bitset;
 using std::stringstream; using std::ofstream; using std::cin;
 
+// comp func to sort the binaries using index of entry
 bool compSetNum(const pair<uint32_t, pair<unsigned int, unsigned int>>& a,const  pair<uint32_t, pair<unsigned int, unsigned int>>& b)
 {
 	return a.second.first < b.second.first;
 }
 
+//comp func to sort the binaries using the frequency of occurence
 bool compVal(const pair<uint32_t, pair<unsigned int, unsigned int>>& a,const pair<uint32_t, pair<unsigned int, unsigned int>>& b)
 {
 	return a.second.second > b.second.second;
 }
 
+// comp func to sort the dictionary entries using the number of mismatches with a binary
 bool cmpMismatch(const pair<uint32_t, vector<unsigned int>>& a,const pair<uint32_t, vector<unsigned int>>& b) {
 	return a.second.size() < b.second.size();
 }
@@ -67,7 +69,12 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
+/**
+ * @brief Converts a binary string to an Integer
+ * 
+ * @param s - binary string which consists of '1's and '0's
+ * @return uint32_t 
+ */
 uint32_t BinStringtoInt(string& s) {
 	uint32_t val = 0;
 	for (unsigned int i = 0; i < s.size(); i++) {
@@ -77,6 +84,13 @@ uint32_t BinStringtoInt(string& s) {
 	return val;
 }
 
+/**
+ * @brief This reads the file with the original binaries, converts the binaries to unsigned int
+ * and returns the binaries using a vector
+ * 
+ * @param fileName - filename which consists the original binaries
+ * @return vector<uint32_t> - vector of binaries 
+ */
 vector<uint32_t> ReadOriginalFile(string fileName) {
 	ifstream ReadFStream(fileName);
 	string tempS;
@@ -92,9 +106,14 @@ vector<uint32_t> ReadOriginalFile(string fileName) {
 		binaryVect.push_back(tempInt);
 	}
 	return binaryVect;
-
 }
 
+/**
+ * @brief Writes the compressed binaries and the dictionary entries in the required format to "cout.txt"
+ * 
+ * @param dictVect - vector of dictionary entries
+ * @param ss - stringstream of compressed binaries
+ */
 void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 	unsigned padsize = ss.str().length();
 	padsize = padsize % 32;
@@ -114,6 +133,12 @@ void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 	}
 }
 
+/**
+ * @brief generates the dictionary entries for a set of binaries
+ * 
+ * @param binaryVect - set of binaries to generate the dictionary
+ * @return vector<uint32_t> - return the dictionary as a vector
+ */
 vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	vector<uint32_t> dictVect;
 
@@ -131,9 +156,9 @@ vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 		sortVect.push_back(m);
 	}
 
-	
+	//sorts in the order they appear in the original binary
 	sort(sortVect.begin(), sortVect.end(), compSetNum);
-
+	//sorts in the order of the frequency 
 	stable_sort(sortVect.begin(), sortVect.end(), compVal);
 
 
@@ -146,12 +171,21 @@ vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	return dictVect;
 }
 
+/**
+ * @brief Finds the number of mismatches for a given binary with the set of dictionary entires and compresses
+ * binary accordingly. 
+ * 
+ * @param curBinary - binary to be compressed
+ * @param dictVect - set of dictionary entries
+ * @param ss - stream to add the compressed binary
+ */
 void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstream& ss) {
 	unsigned int lowMis = 32;
 
 	const uint32_t k = 1 << 31U;
-	vector<pair<uint32_t, vector<unsigned int>>> mismatches;  // dictionary item, vector<mismatch index> 
+	vector<pair<uint32_t, vector<unsigned int>>> mismatches;  // dictionary item, vector<mismatch indices> 
 
+	//count the number of mismatches between current binary and dictionary entries
 	for (unsigned int i = 0; i < dictVect.size(); i++) {
 		unsigned int numMis = 0;
 		uint32_t  XORed = dictVect[i] ^ curBinary;
@@ -203,7 +237,7 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 							cost = 5;
 							costIndex = i.first;
 							unsigned bitmask = (1 << (3 - (i.second[1] - i.second[0]))) | (1 << 3);
-							//compress for 4 bit bitmask with 2 bit mismatches
+							//compress for bitmask based compression with 2 bit mismatches
 							costss.str(string());
 							costss << bitset<3>(2) << bitset<5>(i.second[0]) << bitset<4>(bitmask) << bitset<4>(i.first);
 						}
@@ -224,7 +258,7 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 							unsigned bitmask = (1 << (3 - (i.second[1] - i.second[0]))) | (1 << (3 - (i.second[2] - i.second[0]))) | (1 << 3);
 							cost = 5;
 							costIndex = i.first;
-							//compress for 4 bit bitmask with 3 bit mismatches
+							//compress for bitmask based compression with 3 bit mismatches
 							costss.str(string());
 							costss << bitset<3>(2) << bitset<5>(i.second[0]) << bitset<4>(bitmask) << bitset<4>(i.first);
 						}
@@ -254,6 +288,14 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 
 }
 
+/**
+ * @brief Main compression algorithm. Searches for a direct match, and running length encodings. 
+ * If direct match is not found, findNumMismatch is called to compress the binary using other formats. 
+ * 
+ * @param binaryVect - set of binaries
+ * @param dictVect  - set of dictionary entries
+ * @return stringstream - return a stream of compressed binaries to be written to a file
+ */
 stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) {
 
 	unsigned int RLEcount = 0;
@@ -264,11 +306,9 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 	for (unsigned i = 0; i < vectSize; i++) {
 		curBinary = binaryVect[i];
 		if (RLEcount == 0) {
-			// TODO ----- implement compression except RLE
 			// 1. Check for Direct Mapping
 			auto findIt = find(dictVect.begin(), dictVect.end(), curBinary);
 			if (findIt != dictVect.end()) {
-				//cout << "Direct Mapping at index " << findIt - dictVect.begin() << endl;
 				// Compress for direct mapping
 				ss << bitset<3>(7) << bitset<4>(findIt - dictVect.begin());
 			}
@@ -276,13 +316,12 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 			{
 				//Find number of mismatches with dict entries and compress accordingly
 				findNumMismatch(curBinary, dictVect,ss);
-
 			}
 
 		}
 		if ((i + 1) < vectSize && curBinary == binaryVect[i + 1]) {
 			if (RLEcount == 8) {
-				//Implement RLC encoding
+				//Implement RLE encoding when the limit each reached
 				ss << bitset<3>(1) << bitset<3>(7);
 				RLEcount = 0;
 
@@ -294,7 +333,7 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 		}
 		else if (RLEcount != 0)
 		{
-			// Implement RLE encoding for RLEcount
+			// Implement RLE encoding for RLEcount when the sequence is ended
 			ss << bitset<3>(1) << bitset<3>(RLEcount - 1);
 			RLEcount = 0;
 
@@ -303,6 +342,15 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 	return ss;
 }
 
+
+/**
+ * @brief Reads the compressed file and returns the set of dictionary entries.
+ * The compressed binaries are saved to a stringstream
+ * 
+ * @param fileName - Filename of the compressed binary
+ * @param ss - stringstream to save the compressed binaries
+ * @return vector<uint32_t> 
+ */
 vector<uint32_t> ReadCompressedFile(string fileName, stringstream& ss) {
 	ifstream ReadFStream(fileName);
 	string tempS;
@@ -326,7 +374,13 @@ vector<uint32_t> ReadCompressedFile(string fileName, stringstream& ss) {
 
 }
 
-
+/**
+ * @brief Performs decompression for a given compressed binary and a set of dictionary entries. 
+ * 
+ * @param dictVect - set of dictionary enties
+ * @param readSS - stream of compressed binaries
+ * @param writeSS - stream to write the original binaries
+ */
 void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeSS) {
 
 	bitset<3> prefixB;
@@ -338,20 +392,20 @@ void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeS
 
 	unsigned sslen = readSS.str().length();
 	unsigned curlen = 0;
-
+	//decompress the stream of binaries by going through the prefix and decoding accordingly
 	while (curlen + 3 < sslen) {
 		readSS >> prefixB;
 		curlen += 3;
 
 		switch (prefixB.to_ulong())
 		{
-		case 0:
+		case 0: //When no compression has happened
 			if (curlen + 32 > sslen) break;
 			curlen += 32;
 			readSS >> binaryB;
 			writeSS << binaryB << endl;
 			continue;
-		case 1:
+		case 1://When RLE encoding 
 			if (curlen + 3 > sslen) break;
 			curlen += 3;
 			readSS >> RLEB;
@@ -359,42 +413,42 @@ void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeS
 				writeSS << binaryB << endl;
 			}
 			continue;
-		case 2:
+		case 2://When bitmask based compression
 			if (curlen + 13 > sslen) break;
 			curlen += 13;
 			readSS >> locationB >> bitmaskB >> dictInB;
 			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (bitmaskB.to_ulong() << (28U - locationB.to_ulong())));
 			writeSS << binaryB << endl;
 			continue;
-		case 3:
+		case 3://When 1 bit mismatch compression
 			if (curlen + 9 > sslen) break;
 			curlen += 9;
 			readSS >> locationB  >> dictInB;
 			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (1U << (31U - locationB.to_ulong())));
 			writeSS << binaryB << endl;
 			continue;
-		case 4:
+		case 4://When 2 bit consecutive mismatch compression
 			if (curlen + 9 > sslen) break;
 			curlen += 9;
 			readSS >> locationB >> dictInB;
 			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (3U << (30U - locationB.to_ulong())));
 			writeSS << binaryB << endl;
 			continue;
-		case 5:
+		case 5://When 4 bit consecutive mismatch compression
 			if (curlen + 9 > sslen) break;
 			curlen += 9;
 			readSS >> locationB >> dictInB;
 			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (15U << (28U - locationB.to_ulong())));
 			writeSS << binaryB << endl;
 			continue;
-		case 6:
+		case 6://When 2 bit anywhere compression
 			if (curlen + 14 > sslen) break;
 			curlen += 14;
 			readSS >> locationB >> locationB2 >> dictInB;
 			binaryB = bitset<32>(dictVect[dictInB.to_ulong()] ^ (  (1U << (31U - locationB.to_ulong())) | (1U << (31U - locationB2.to_ulong())))   );
 			writeSS << binaryB << endl;
 			continue;
-		case 7:
+		case 7://When direct mapping compression
 			if (curlen + 4 > sslen) break;
 			curlen += 4;
 			readSS >> dictInB;
