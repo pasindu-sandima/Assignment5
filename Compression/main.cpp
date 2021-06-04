@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 	else if (problem == 2) {
 		stringstream readSS;
 		vector<uint32_t> dictVect = ReadCompressedFile("compressed.txt", readSS);
-		ofstream writeSS("original.txt");
+		ofstream writeSS("dout.txt");
 		decompress(dictVect, readSS,writeSS);
 	}
 	else {
@@ -99,7 +99,7 @@ void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 	unsigned padsize = ss.str().length();
 	padsize = padsize % 32;
 
-	ofstream WriteFileStream("compressed.txt");
+	ofstream WriteFileStream("cout.txt");
 
 	for (unsigned int i = 0; i < ss.str().length(); i++) {
 		WriteFileStream << ss.str()[i];
@@ -177,7 +177,7 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 	else {
 		unsigned cost = 10;
 		stringstream costss;
-		unsigned costIndex = 15;
+		unsigned costIndex = 15;  //Index of the dictionary item cost is assigned
 		sort(mismatches.begin(), mismatches.end(), cmpMismatch);
 
 		if (lowMis == 1) {
@@ -198,7 +198,7 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 						}
 
 					}
-					else if ((i.second[1] - i.second[0]) < 4) {
+					else if ((i.second[1] - i.second[0]) < 4  && i.second[0] <29 ) {
 						if (cost >= 5 && i.first < costIndex) {
 							cost = 5;
 							costIndex = i.first;
@@ -206,7 +206,6 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 							//compress for 4 bit bitmask with 2 bit mismatches
 							costss.str(string());
 							costss << bitset<3>(2) << bitset<5>(i.second[0]) << bitset<4>(bitmask) << bitset<4>(i.first);
-
 						}
 					}
 					else {
@@ -220,7 +219,7 @@ void findNumMismatch(uint32_t& curBinary, vector<uint32_t>& dictVect, stringstre
 					}
 				}
 				else if (i.second.size() == 3) {
-					if ((i.second[2] - i.second[0]) < 4) {
+					if ((i.second[2] - i.second[0]) < 4 && i.second[0] <29) {
 						if (cost >= 5 && i.first < costIndex) {
 							unsigned bitmask = (1 << (3 - (i.second[1] - i.second[0]))) | (1 << (3 - (i.second[2] - i.second[0]))) | (1 << 3);
 							cost = 5;
