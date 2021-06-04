@@ -1,11 +1,8 @@
 #include <iostream>
-#include <iomanip>
 #include <fstream>
 #include <string>
 #include <vector>
-#include <set>
 #include <map>
-#include <unordered_map>
 #include <algorithm>
 #include <bitset>
 #include <sstream>
@@ -13,8 +10,22 @@
 //using namespace std;
 using std::pair; using std::vector; using std::uint32_t;
 using std::map; using std::string; using std::cout; using std::endl;
-using std::sort; using std::ifstream; using std::bitset;
+using std::sort; using std::stable_sort; using std::ifstream; using std::bitset;
 using std::stringstream; using std::ofstream; using std::cin;
+
+bool compSetNum(const pair<uint32_t, pair<unsigned int, unsigned int>>& a,const  pair<uint32_t, pair<unsigned int, unsigned int>>& b)
+{
+	return a.second.first < b.second.first;
+}
+
+bool compVal(const pair<uint32_t, pair<unsigned int, unsigned int>>& a,const pair<uint32_t, pair<unsigned int, unsigned int>>& b)
+{
+	return a.second.second > b.second.second;
+}
+
+bool cmpMismatch(const pair<uint32_t, vector<unsigned int>>& a,const pair<uint32_t, vector<unsigned int>>& b) {
+	return a.second.size() < b.second.size();
+}
 
 
 stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect);
@@ -29,15 +40,14 @@ void decompress(vector<uint32_t> dictVect, stringstream& readSS,ofstream& writeS
 
 int main(int argc, char *argv[]) {
 
-	/*if (argc != 2) {
+	if (argc != 2) {
 		cout << "Invalid Number of Arguments" << endl;
 		return 0;
-	}*/
+	}
 
 	
 
-	//unsigned problem = atoi(argv[1]);
-	unsigned problem = 1;
+	unsigned problem = atoi(argv[1]);
 
 	if (problem == 1) {
 		vector<uint32_t> binaryVect = ReadOriginalFile("original.txt");
@@ -57,21 +67,6 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
-
-bool compSetNum(pair<uint32_t, pair<int, int>>& a, pair<uint32_t, pair<int, int>>& b)
-{
-	return a.second.first < b.second.first;
-}
-
-bool compVal(pair<uint32_t, pair<int, int>>& a, pair<uint32_t, pair<int, int>>& b)
-{
-	return a.second.second > b.second.second;
-}
-
-bool cmpMismatch(pair<uint32_t, vector<unsigned int>>& a, pair<uint32_t, vector<unsigned int>>& b) {
-	return a.second.size() < b.second.size();
-}
 
 uint32_t BinStringtoInt(string& s) {
 	uint32_t val = 0;
@@ -122,33 +117,29 @@ void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 vector<uint32_t> generateDict(vector<uint32_t>& binaryVect) {
 	vector<uint32_t> dictVect;
 
-	map<uint32_t, pair<int, int>> count;
+	map<uint32_t, pair<unsigned int, unsigned int>> count;
 
-	int setCounter = 0;
+	unsigned int setCounter = 0;
 	for (uint32_t i : binaryVect) {
 		if (count[i].second++ == 0) {
 			count[i].first = setCounter++;
 		}
 	}
 
-
-	vector < pair<uint32_t, pair<int, int>>> sortVect;
+	vector < pair<uint32_t, pair<unsigned int, unsigned int>>> sortVect;
 	for (auto& m : count) {
 		sortVect.push_back(m);
 	}
 
-	/*for (auto m : count) {
-		cout << m.first << " :" << m.second.second << " " << m.second.first << endl << endl;
-	}*/
-
+	
 	sort(sortVect.begin(), sortVect.end(), compSetNum);
-	sort(sortVect.begin(), sortVect.end(), compVal);
+
+	stable_sort(sortVect.begin(), sortVect.end(), compVal);
 
 
 	int i = 1;
 	for (auto m : sortVect) {
 		dictVect.push_back(m.first);
-		//cout << m.first << " :" << m.second.second << " " << m.second.first << endl;
 		if (i++ >= 16) break;
 	}
 
@@ -284,7 +275,7 @@ stringstream compress(vector<uint32_t>& binaryVect, vector<uint32_t>& dictVect) 
 			}
 			else
 			{
-				//Find number of mismatches with dict entries
+				//Find number of mismatches with dict entries and compress accordingly
 				findNumMismatch(curBinary, dictVect,ss);
 
 			}
