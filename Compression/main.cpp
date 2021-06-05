@@ -102,6 +102,7 @@ vector<uint32_t> ReadOriginalFile(string fileName) {
 	}
 
 	while (getline(ReadFStream, tempS)) {
+		if (tempS.size() != 32) break;
 		tempInt = BinStringtoInt(tempS);
 		binaryVect.push_back(tempInt);
 	}
