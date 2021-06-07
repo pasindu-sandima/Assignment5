@@ -125,9 +125,8 @@ void WriteCompressedFile(vector<uint32_t>& dictVect, stringstream& ss) {
 		WriteFileStream << ss.str()[i];
 		if (i % 32 == 31) WriteFileStream << endl;
 	}
-
-	WriteFileStream << string(32 - padsize, '0') << endl;
-
+	if(padsize != 0) WriteFileStream << string(32 - padsize, '0') << endl;
+	
 	WriteFileStream << "xxxx" << endl;
 	for (auto& i : dictVect) {
 		WriteFileStream << bitset<32>(i) << endl;
